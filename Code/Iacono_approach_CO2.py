@@ -73,17 +73,17 @@ new_train[:,6] = NBOO
 a  = reduced_data[:,0].astype("float")
 b = reduced_data[:,1].astype("float")
 new_train[:,7] = a/b
-#Train-validation-test split: 60-20-20
+#Train-validation-test split: 60-20-20, using ordinary linear regression
 X_train, X_test, y_train, y_test = train_test_split(new_train, y_whole_set, test_size=0.2, random_state=1)
 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=1) 
 reg = LinearRegression().fit(X_train, y_train)
 beta = reg.coef_
 beta[0] = reg.intercept_
 y_val_pred = np.matmul(X_val,beta)
-val_error = np.sum((y_val_pred-y_val)**2)/196  #validation error(MSE)
+val_error = np.sum((y_val_pred-y_val)**2)/len(y_val_pred)  #validation error(MSE)
 
 y_test_pred = np.matmul(X_test,beta)
-test_error = np.sum((y_test_pred-y_test)**2)/196 #test error(MSE)
+test_error = np.sum((y_test_pred-y_test)**2)/len(y_val_pred)  #test error(MSE)
 
 
 
