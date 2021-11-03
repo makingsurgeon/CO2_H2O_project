@@ -8,7 +8,8 @@ Created on Sat Oct 30 20:34:16 2021
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+#%%
 #Remove data that have missing values
 data = pd.read_excel("Solubility_database5-10.xlsx", header=1)
 data = data[data["SiO2 (wt.% dry)"].notna()]
@@ -72,9 +73,23 @@ beta = reg.coef_
 beta[0] = reg.intercept_
 
 y_val_pred = np.matmul(X_val,beta)
-val_error = np.sum((y_val_pred-y_val)**2)/len(y_val_pred)
+val_error = np.sum((y_val_pred-y_val)**2)/len(y_val_pred)#0.1238
 
 y_test_pred = np.matmul(X_test,beta)
-test_error = np.sum((y_test_pred-y_test)**2)/len(y_val_pred) 
-
-
+test_error = np.sum((y_test_pred-y_test)**2)/len(y_val_pred) #0.2739
+#%%
+rid = Ridge(alpha=100).fit(X_train, y_train)
+beta_r = rid.coef_
+beta_r[0] = rid.intercept_
+y_val_pred_r = np.matmul(X_val,beta_r)
+val_error_r = np.sum((y_val_pred_r-y_val)**2)/len(y_val_pred)#0.2022  #validation error(MSE)
+y_test_pred_r = np.matmul(X_test,beta_r)
+test_error_r = np.sum((y_test_pred_r-y_test)**2)/len(y_val_pred)#0.2721  #test error(MSE)
+#%%
+las = Lasso(alpha=0.00001).fit(X_train, y_train)
+beta_l = las.coef_
+beta_l[0] = las.intercept_
+y_val_pred_l = np.matmul(X_val,beta_l)
+val_error_l = np.sum((y_val_pred_l-y_val)**2)/len(y_val_pred)#0.1238 #validation error(MSE)
+y_test_pred_l = np.matmul(X_test,beta_l)
+test_error_l = np.sum((y_test_pred_l-y_test)**2)/len(y_val_pred)#0.2739  #test error(MSE)
