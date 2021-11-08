@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
+import matplotlib.pyplot as plt
 #%%
 #Remove data that have missing values
 data = pd.read_excel("Solubility_database5-10.xlsx", header=1)
@@ -102,4 +103,9 @@ y_val_pred_l = np.matmul(X_val,beta_l)
 val_error_l = np.sum((y_val_pred_l-y_val)**2)/len(y_val_pred)#1.5523  #validation error(MSE)
 y_test_pred_l = np.matmul(X_test,beta_l)
 test_error_l = np.sum((y_test_pred_l-y_test)**2)/len(y_val_pred)#0.966  #test error(MSE)
+#%%
+plt.scatter(y_test, y_test_pred)
+plt.xlabel("measured CO2")
+plt.ylabel("calculated CO2")
+
 
