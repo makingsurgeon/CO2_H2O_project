@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.neighbors import LocalOutlierFactor
 import matplotlib.pyplot as plt
 #%%
 #Remove data that have missing values
@@ -104,8 +105,30 @@ val_error_l = np.sum((y_val_pred_l-y_val)**2)/len(y_val_pred)#1.5523  #validatio
 y_test_pred_l = np.matmul(X_test,beta_l)
 test_error_l = np.sum((y_test_pred_l-y_test)**2)/len(y_val_pred)#0.966  #test error(MSE)
 #%%
+y_test = np.exp(y_test)/10000
+y_test_pred = np.exp(y_test_pred)/10000
+#%%
 plt.scatter(y_test, y_test_pred)
 plt.xlabel("measured CO2")
 plt.ylabel("calculated CO2")
+#%%
+clf = LocalOutlierFactor()
+y_test_pred = np.reshape(y_test_pred,(-1,1))
+new_y_pred = clf.fit_predict(y_test_pred) 
+#%%
+mask = new_y_pred != -1
+#%%
+y_test_new = y_test[mask]
+#%%
+y_test_pred_new = y_test_pred[mask,:]
+#%%
+plt.scatter(y_test_new, y_test_pred_new)
+plt.xlabel("measured CO2")
+plt.ylabel("calculated CO2")
+#%%
+
+
+
+
 
 
