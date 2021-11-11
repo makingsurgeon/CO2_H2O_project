@@ -53,7 +53,7 @@ for i in range(np.shape(reduced_data)[0]):
         idx3.append(i)
 reduced_data = np.delete(reduced_data, idx3, 0)
 
-y_whole_set = np.log(reduced_data[:,3].astype("float")*1000000)
+y_whole_set = np.log(reduced_data[:,3].astype("float")*10000)
 
 new_train = np.ones((np.shape(reduced_data)[0],4))
 new_train[:,1] = np.log(reduced_data[:,2].astype("float"))
@@ -94,6 +94,9 @@ y_val_pred_l = np.matmul(X_val,beta_l)
 val_error_l = np.sum((y_val_pred_l-y_val)**2)/len(y_val_pred)#0.1238 #validation error(MSE)
 y_test_pred_l = np.matmul(X_test,beta_l)
 test_error_l = np.sum((y_test_pred_l-y_test)**2)/len(y_val_pred)#0.2739  #test error(MSE)
+#%%
+y_test = np.exp(y_test)/10000
+y_test_pred = np.exp(y_test_pred)/10000
 #%%
 plt.scatter(y_test, y_test_pred)
 plt.xlabel("measured H2O")
