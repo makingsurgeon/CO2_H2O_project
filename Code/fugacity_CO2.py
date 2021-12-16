@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sun Oct 24 18:26:33 2021
+Created on Mon Dec  6 10:20:46 2021
 
-@author: Bihong
+@author: zihuiouyang
 """
 import pandas as pd
 import numpy as np
@@ -14,8 +14,7 @@ import matplotlib.pyplot as plt
 import statsmodels.api as sm
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.svm import SVR
-#%%
-#Remove data that have missing values
+
 data = pd.read_excel("Solubility_database5-10.xlsx", header=1)
 data = data[data["SiO2 (wt.% dry)"].notna()]
 data = data[data["PCO2 (bar)"].notna()]
@@ -42,6 +41,7 @@ for i in range(np.shape(copy_of_data)[0]):
 copy_of_data = copy_of_data[index1]
 #Data used for fitting the model
 copy_of_data = copy_of_data[copy_of_data[:,120]!=0]
+#%%
 idx = [9,11,30,47,122,127,129,131,133,135,137,139,141,143,145]
 reduced_data = copy_of_data[:,idx]
 
@@ -64,7 +64,27 @@ for i in range(np.shape(reduced_data)[0]):
     if type(reduced_data[i,1]) is str:
         idx3.append(i)
 reduced_data = np.delete(reduced_data, idx3, 0)
-
+#%%
+temperature = reduced_data[:,1]+273.15
+d = (304.2/(0.0738**2)*6.93054*10**(-7))-(8.38293*10**(-8)/(0.0738**2)*temperature)
+c = (304.2/(0.0738**1.5)*(-3.30558*10**(-5)))+(2.30524*10**(-6)/(0.0738**1.5)*temperature)
+b = 9.18301*10**(-4)*304.2/0.0738
+a = (304.2**2.5/(0.0738)*(5.45963*10**(-5)))-(8.6392*10**(-6)*304.2**1.5/(0.0738)*temperature)
+p = reduced_data[:,3]/1000
+temperature = temperature.astype(np.float)
+d = d.astype(np.float)
+c = c.astype(np.float)
+a = a.astype(np.float)
+p = p.astype(np.float)
+#%%
+f = 8.3145*temperature*np.log(1000*p)+b*p
+f = f+(a/(b*np.sqrt(temperature)))*(np.log(8.3145*temperature+b*p)-np.log(8.3145*temperature+2*b*p))
+f = f+(2/3)*c*p**(3/2)+d/2*p**2
+f = f/(8.3145*temperature)
+f = np.exp(f)
+f = f/reduced_data[:,3]
+reduced_data[:,3] = f
+#%%
 y_whole_set = np.log(reduced_data[:,4].astype("float"))
 new_train = np.ones((np.shape(reduced_data)[0],8))
 new_train[:,1] = reduced_data[:,2]
@@ -86,32 +106,16 @@ reg = LinearRegression().fit(X_train, y_train)
 beta = reg.coef_
 beta[0] = reg.intercept_
 y_val_pred = np.matmul(X_val,beta)
-val_error = np.sum((y_val_pred-y_val)**2)/len(y_val_pred)#1.5526  #validation error(MSE)
+val_error = np.sum((y_val_pred-y_val)**2)/len(y_val_pred)#1.1989  #validation error(MSE)
 
 y_test_pred = np.matmul(X_test,beta)
-test_error = np.sum((y_test_pred-y_test)**2)/len(y_test_pred)#0.966  #test error(MSE)
-#%%
-neigh = KNeighborsRegressor()
-#%%
-neigh.fit(X_train, y_train)
-y_nn_predict_val = neigh.predict(X_val)
-y_nn_predict_test = neigh.predict(X_test)
-nn_val = np.sum((y_nn_predict_val-y_val)**2)/len(y_val) #1.3209
-nn_test = np.sum((y_nn_predict_test-y_test)**2)/len(y_test) #0.665
-#%%
-svr = SVR(kernel = "linear", C=10)
-#%%
-svr.fit(X_train, y_train)
-y_svm_predict_val = svr.predict(X_val)
-y_svm_predict_test = svr.predict(X_test)
-svm_val = np.sum((y_svm_predict_val-y_val)**2)/len(y_val) #1.8973
-svm_test = np.sum((y_svm_predict_test-y_test)**2)/len(y_test) #1.0208
+test_error = np.sum((y_test_pred-y_test)**2)/len(y_test_pred)#0.8955  #test error(MSE)
 #%%
 y_pred = np.zeros(len(y_val))
 for i in range(np.shape(X_val)[0]):
     a = np.zeros(np.shape(X_train)[0])
     for j in range(np.shape(X_train)[0]):
-        a[j] = np.linalg.norm(X_train[j]-X_val[i])
+        a[j] = np.linalg.norm(X_train[j]-X_val[i], ord = 1)
     b = a
     for k in range(len(b)):
         if b[k] == 0:
@@ -122,14 +126,13 @@ for i in range(np.shape(X_val)[0]):
     r = wls_model.fit()
     p = r.predict(exog = X_val[i])
     y_pred[i] = p
-#%%
-val_error_new = np.sum((y_pred-y_val)**2)/len(y_val) #1.2146
+val_error_new = np.sum((y_pred-y_val)**2)/len(y_val) #0.9392
 #%%
 y_pred_test = np.zeros(len(y_test))
 for i in range(np.shape(X_test)[0]):
     a = np.zeros(np.shape(X_train)[0])
     for j in range(np.shape(X_train)[0]):
-        a[j] = np.linalg.norm(X_train[j]-X_test[i])
+        a[j] = np.linalg.norm(X_train[j]-X_test[i], ord = 1)
     b = a
     for k in range(len(b)):
         if b[k] == 0:
@@ -140,51 +143,7 @@ for i in range(np.shape(X_test)[0]):
     r = wls_model.fit()
     p = r.predict(exog = X_test[i])
     y_pred_test[i] = p
-test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.5898
-#%%
-#Ridge Regression
-rid = Ridge(alpha=0.1).fit(X_train, y_train)
-beta_r = rid.coef_
-beta_r[0] = rid.intercept_
-y_val_pred_r = np.matmul(X_val,beta_r)
-val_error_r = np.sum((y_val_pred_r-y_val)**2)/len(y_val_pred)#1.56  #validation error(MSE)
-y_test_pred_r = np.matmul(X_test,beta_r)
-test_error_r = np.sum((y_test_pred_r-y_test)**2)/len(y_val_pred)#0.9648  #test error(MSE)
-#LASSO
-las = Lasso(alpha=0.0001).fit(X_train, y_train)
-beta_l = las.coef_
-beta_l[0] = las.intercept_
-y_val_pred_l = np.matmul(X_val,beta_l)
-val_error_l = np.sum((y_val_pred_l-y_val)**2)/len(y_val_pred)#1.5523  #validation error(MSE)
-y_test_pred_l = np.matmul(X_test,beta_l)
-test_error_l = np.sum((y_test_pred_l-y_test)**2)/len(y_val_pred)#0.966  #test error(MSE)
-#%%
-y_test = np.exp(y_test)/10000
-y_test_pred = np.exp(y_test_pred)/10000
-#%%
-plt.scatter(y_test, y_test_pred)
-plt.xlabel("measured CO2")
-plt.ylabel("calculated CO2")
-#%%
-clf = LocalOutlierFactor()
-y_test_pred = np.reshape(y_test_pred,(-1,1))
-new_y_pred = clf.fit_predict(y_test_pred) 
-#%%
-mask = new_y_pred != -1
-#%%
-y_test_new = y_test[mask]
-#%%
-y_test_pred_new = y_test_pred[mask,:]
-x = np.linspace(3.5, 13, 1000)
-#%%
-plt.scatter(y_test, y_test_pred)
-plt.plot(x,x,"-k")
-plt.xlabel("measured CO2 in wt%")
-plt.ylabel("calculated CO2")
-plt.title("test data")
-#%%
-
-
+test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.7657
 
 
 
