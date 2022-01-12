@@ -71,11 +71,11 @@ c = (304.2/(0.0738**1.5)*(-3.30558*10**(-5)))+(2.30524*10**(-6)/(0.0738**1.5)*te
 b = 9.18301*10**(-4)*304.2/0.0738
 a = (304.2**2.5/(0.0738)*(5.45963*10**(-5)))-(8.6392*10**(-6)*304.2**1.5/(0.0738)*temperature)
 p = reduced_data[:,3]/1000
-temperature = temperature.astype(np.float)
-d = d.astype(np.float)
-c = c.astype(np.float)
-a = a.astype(np.float)
-p = p.astype(np.float)
+temperature = temperature.astype(float)
+d = d.astype(float)
+c = c.astype(float)
+a = a.astype(float)
+p = p.astype(float)
 #%%
 f = 8.3145*temperature*np.log(1000*p)+b*p
 f = f+(a/(b*np.sqrt(temperature)))*(np.log(8.3145*temperature+b*p)-np.log(8.3145*temperature+2*b*p))
@@ -83,6 +83,11 @@ f = f+(2/3)*c*p**(3/2)+d/2*p**2
 f = f/(8.3145*temperature)
 f = np.exp(f)
 f = f/reduced_data[:,3]
+plt.scatter(f, reduced_data[:,3])
+plt.xlabel("fugacity coefficient")
+plt.ylabel("partial pressure")
+plt.title("test data fugacity")
+#%%
 reduced_data[:,3] = f
 #%%
 y_whole_set = np.log(reduced_data[:,4].astype("float"))
@@ -144,7 +149,12 @@ for i in range(np.shape(X_test)[0]):
     p = r.predict(exog = X_test[i])
     y_pred_test[i] = p
 test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.7657
-
-
+#%%
+x = np.linspace(3.5, 13, 1000)
+plt.scatter(y_test, y_pred_test)
+plt.plot(x,x,"-k")
+plt.xlabel("measured CO2 in wt%")
+plt.ylabel("calculated CO2")
+plt.title("test data fugacity")
 
 

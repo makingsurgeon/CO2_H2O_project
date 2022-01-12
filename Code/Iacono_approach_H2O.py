@@ -54,7 +54,7 @@ for i in range(np.shape(reduced_data)[0]):
         idx3.append(i)
 reduced_data = np.delete(reduced_data, idx3, 0)
 
-y_whole_set = np.log(reduced_data[:,3].astype("float")*10000)
+y_whole_set = reduced_data[:,3].astype("float")
 
 new_train = np.ones((np.shape(reduced_data)[0],4))
 new_train[:,1] = np.log(reduced_data[:,2].astype("float"))
@@ -155,8 +155,8 @@ for i in range(np.shape(X_test)[0]):
     y_pred[i] = p
 test_error_new = np.sum((y_pred-y_test)**2)/len(y_test) #0.5898
 #%%
-plt.scatter(y_pred, y_test)
-x = np.linspace(8, 12, 1000)
+plt.scatter(y_test, y_pred_test)
+x = np.linspace(0, 8, 1000)
 plt.plot(x,x,"-k")
 plt.xlabel("measured H2O in wt%")
 plt.ylabel("calculated H2O")

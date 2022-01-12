@@ -65,7 +65,7 @@ for i in range(np.shape(reduced_data)[0]):
         idx3.append(i)
 reduced_data = np.delete(reduced_data, idx3, 0)
 
-y_whole_set = np.log(reduced_data[:,4].astype("float"))
+y_whole_set = reduced_data[:,4].astype("float")/10000
 new_train = np.ones((np.shape(reduced_data)[0],8))
 new_train[:,1] = reduced_data[:,2]
 new_train[:,2] = reduced_data[:,7]/(reduced_data[:,11]+reduced_data[:,12]+reduced_data[:,13])
@@ -140,7 +140,7 @@ for i in range(np.shape(X_test)[0]):
     r = wls_model.fit()
     p = r.predict(exog = X_test[i])
     y_pred_test[i] = p
-test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.5898
+test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #4.9902
 #%%
 #Ridge Regression
 rid = Ridge(alpha=0.1).fit(X_train, y_train)
@@ -160,24 +160,26 @@ y_test_pred_l = np.matmul(X_test,beta_l)
 test_error_l = np.sum((y_test_pred_l-y_test)**2)/len(y_val_pred)#0.966  #test error(MSE)
 #%%
 y_test = np.exp(y_test)/10000
-y_test_pred = np.exp(y_test_pred)/10000
+y_pred_test = np.exp(y_pred_test)/10000
 #%%
 plt.scatter(y_test, y_test_pred)
 plt.xlabel("measured CO2")
 plt.ylabel("calculated CO2")
 #%%
 clf = LocalOutlierFactor()
-y_test_pred = np.reshape(y_test_pred,(-1,1))
-new_y_pred = clf.fit_predict(y_test_pred) 
+y_pred_test = np.reshape(y_pred_test,(-1,1))
+new_y_pred = clf.fit_predict(y_pred_test) 
 #%%
 mask = new_y_pred != -1
 #%%
 y_test_new = y_test[mask]
 #%%
-y_test_pred_new = y_test_pred[mask,:]
-x = np.linspace(3.5, 13, 1000)
+y_test_pred_new = y_pred_test[mask,:]
 #%%
-plt.scatter(y_test, y_test_pred)
+x = np.linspace(0, 13, 1000)
+#%%
+#%%
+plt.scatter(y_test_new, y_test_pred_new)
 plt.plot(x,x,"-k")
 plt.xlabel("measured CO2 in wt%")
 plt.ylabel("calculated CO2")
