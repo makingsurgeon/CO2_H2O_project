@@ -13,25 +13,17 @@ import matplotlib.pyplot as plt
 import statsmodels.api as sm
 #%%
 #Remove data that have missing values
-data = pd.read_excel("Solubility_database5-10.xlsx", header=1)
-data = data[data["SiO2 (wt.% dry)"].notna()]
+data = pd.read_excel("Solubility_database5-11.xlsx", header=1)
+data = data[data["xSiO2"].notna()]
 data = data[data["PH2O (bar)"].notna()]
 data = data[data["H2O Glass (wt.%)"].notna()]
 data = data.to_numpy()
 copy_of_data = data
-
-for i in range(np.shape(copy_of_data)[0]):
-    if np.isnan(data[i,122]) and not np.isnan(data[i,120]):
-        copy_of_data[i,122] = copy_of_data[i,120]*10000
-index1 = []
-for i in range(np.shape(copy_of_data)[0]):
-    if not np.isnan(copy_of_data[i,122]):
-        index1.append(i)
-copy_of_data = copy_of_data[index1]
+#%%
 
 copy_of_data = copy_of_data[copy_of_data[:,46]!=0]
 #Data used for fitting the model
-idx = [9,11,46,118,127,129,131,133,135,137,139,141,143,145]
+idx = [9,11,46,118,162,163,164,165,166,167,168,169,170,171]
 reduced_data = copy_of_data[:,idx]
 
 idx1 = []
@@ -53,19 +45,31 @@ for i in range(np.shape(reduced_data)[0]):
     if type(reduced_data[i,1]) is str:
         idx3.append(i)
 reduced_data = np.delete(reduced_data, idx3, 0)
+#%%
+idx1 = []
+for i in range(np.shape(reduced_data)[0]):
+    if reduced_data[i,10]+reduced_data[i,11]+reduced_data[i,12] != 0:
+        idx1.append(i)
 
-y_whole_set = reduced_data[:,3].astype("float")
+reduced_data = reduced_data[idx1]
 
-new_train = np.ones((np.shape(reduced_data)[0],4))
-new_train[:,1] = np.log(reduced_data[:,2].astype("float"))
-
+#%%
+new_train = np.ones((np.shape(reduced_data)[0],8))
+new_train[:,1] = reduced_data[:,6]/(reduced_data[:,10]+reduced_data[:,11]+reduced_data[:,12])
+new_train[:,2] = (reduced_data[:,7]+reduced_data[:,9])
+new_train[:,3] = (reduced_data[:,11]+reduced_data[:,12])
+new_train[:,4] = np.log(reduced_data[:,2].astype("float"))
 NBO = 2*(reduced_data[:,7]+reduced_data[:,9]+reduced_data[:,10]+reduced_data[:,11]+reduced_data[:,12]-reduced_data[:,6])
 NBOO = NBO/(2*reduced_data[:,4]+2*reduced_data[:,5]+3*reduced_data[:,6]+reduced_data[:,7]+reduced_data[:,9]+reduced_data[:,10]+reduced_data[:,11]+reduced_data[:,12])
-new_train[:,2] = NBOO
+new_train[:,5] = NBOO
 
 a  = reduced_data[:,0].astype("float")
 b = reduced_data[:,1].astype("float")
-new_train[:,3] = a/b
+new_train[:,6] = a/b
+new_train[:,7] = 1/reduced_data[:,1]
+
+y_whole_set = np.log(reduced_data[:,3].astype("float"))
+#%%
 #Train-validation-test split: 60-20-20, using ordinary linear regression
 X_train, X_test, y_train, y_test = train_test_split(new_train, y_whole_set, test_size=0.2, random_state=1)
 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=1) 
@@ -75,10 +79,10 @@ beta = reg.coef_
 beta[0] = reg.intercept_
 
 y_val_pred = np.matmul(X_val,beta)
-val_error = np.sum((y_val_pred-y_val)**2)/len(y_val_pred)#0.1238
+val_error = np.sum((y_val_pred-y_val)**2)/len(y_val_pred)#0.293
 
 y_test_pred = np.matmul(X_test,beta)
-test_error = np.sum((y_test_pred-y_test)**2)/len(y_val_pred) #0.2739
+test_error = np.sum((y_test_pred-y_test)**2)/len(y_val_pred) #0.3433
 #%%
 y_pred = np.zeros(len(y_val))
 for i in range(np.shape(X_val)[0]):
@@ -96,7 +100,7 @@ for i in range(np.shape(X_val)[0]):
     p = r.predict(exog = X_val[i])
     y_pred[i] = p
 #%%
-val_error_new = np.sum((y_pred-y_val)**2)/len(y_val) #0.1031
+val_error_new = np.sum((y_pred-y_val)**2)/len(y_val) #0.1358
 #%%
 y_pred_test = np.zeros(len(y_test))
 for i in range(np.shape(X_test)[0]):
@@ -113,7 +117,7 @@ for i in range(np.shape(X_test)[0]):
     r = wls_model.fit()
     p = r.predict(exog = X_test[i])
     y_pred_test[i] = p
-test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.1556
+test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.1863
 #%%
 rid = Ridge(alpha=100).fit(X_train, y_train)
 beta_r = rid.coef_
@@ -131,8 +135,8 @@ val_error_l = np.sum((y_val_pred_l-y_val)**2)/len(y_val_pred)#0.1238 #validation
 y_test_pred_l = np.matmul(X_test,beta_l)
 test_error_l = np.sum((y_test_pred_l-y_test)**2)/len(y_val_pred)#0.2739  #test error(MSE)
 #%%
-y_test = np.exp(y_test)/10000
-y_test_pred = np.exp(y_test_pred)/10000
+y_test = np.exp(y_test)
+y_test_pred = np.exp(y_test_pred)
 #%%
 plt.scatter(y_test, y_test_pred)
 plt.xlabel("measured H2O")
@@ -155,8 +159,14 @@ for i in range(np.shape(X_test)[0]):
     y_pred[i] = p
 test_error_new = np.sum((y_pred-y_test)**2)/len(y_test) #0.5898
 #%%
-plt.scatter(y_test, y_pred_test)
-x = np.linspace(0, 8, 1000)
+booArray = y_test < 10
+#%%
+y_test_new = y_test[booArray]
+#%%
+y_test_pred_new = y_test_pred[booArray]
+#%%
+plt.scatter(y_test_new, y_test_pred_new)
+x = np.linspace(0, 10, 1000)
 plt.plot(x,x,"-k")
 plt.xlabel("measured H2O in wt%")
 plt.ylabel("calculated H2O")

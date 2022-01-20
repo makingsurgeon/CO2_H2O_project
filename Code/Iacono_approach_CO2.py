@@ -16,13 +16,13 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.svm import SVR
 #%%
 #Remove data that have missing values
-data = pd.read_excel("Solubility_database5-10.xlsx", header=1)
-data = data[data["SiO2 (wt.% dry)"].notna()]
+data = pd.read_excel("Solubility_database5-11.xlsx", header=1)
+data = data[data["xSiO2"].notna()]
 data = data[data["PCO2 (bar)"].notna()]
 data = data[data["CO2 Glass (wt.%)"].notna()]
 data = data.to_numpy()
 copy_of_data = data
-
+#%%
 for i in range(np.shape(copy_of_data)[0]):
     if np.isnan(data[i,30]) and not np.isnan(data[i,26]):
         copy_of_data[i,30] = copy_of_data[i,26]
@@ -31,7 +31,6 @@ for i in range(np.shape(copy_of_data)[0]):
     if not np.isnan(copy_of_data[i,30]):
         index.append(i)
 copy_of_data = copy_of_data[index]
-
 for i in range(np.shape(copy_of_data)[0]):
     if np.isnan(data[i,122]) and not np.isnan(data[i,120]):
         copy_of_data[i,122] = copy_of_data[i,120]*10000
@@ -40,11 +39,13 @@ for i in range(np.shape(copy_of_data)[0]):
     if not np.isnan(copy_of_data[i,122]):
         index1.append(i)
 copy_of_data = copy_of_data[index1]
-#Data used for fitting the model
-copy_of_data = copy_of_data[copy_of_data[:,120]!=0]
-idx = [9,11,30,47,122,127,129,131,133,135,137,139,141,143,145]
+#%%
+idx = [9,11,30,47,122,162,163,164,165,166,167,168,169,170,171]
 reduced_data = copy_of_data[:,idx]
-
+#%%
+for i in range(5,15):
+    reduced_data[:,i] = reduced_data[:,i]/100
+#%%
 idx1 = []
 for i in range(np.shape(reduced_data)[0]):
     if reduced_data[i,11]+reduced_data[i,12]+reduced_data[i,13] != 0:
@@ -52,7 +53,7 @@ for i in range(np.shape(reduced_data)[0]):
 
 reduced_data = reduced_data[idx1]
 reduced_data = reduced_data[reduced_data[:,3]!=0]
-
+#%%
 idx2 = []
 for i in range(np.shape(reduced_data)[0]):
     if type(reduced_data[i,0]) is str:
@@ -64,21 +65,25 @@ for i in range(np.shape(reduced_data)[0]):
     if type(reduced_data[i,1]) is str:
         idx3.append(i)
 reduced_data = np.delete(reduced_data, idx3, 0)
-
-y_whole_set = reduced_data[:,4].astype("float")/10000
+#%%
+reduced_data = reduced_data[reduced_data[:,4]!=0]
+#%%
+y_whole_set = np.log(reduced_data[:,4].astype("float"))
+#%%
 new_train = np.ones((np.shape(reduced_data)[0],8))
-new_train[:,1] = reduced_data[:,2]
-new_train[:,2] = reduced_data[:,7]/(reduced_data[:,11]+reduced_data[:,12]+reduced_data[:,13])
-new_train[:,3] = (reduced_data[:,8]+reduced_data[:,10])/100
-new_train[:,4] = (reduced_data[:,12]+reduced_data[:,13])/100
-new_train[:,5] = np.log(reduced_data[:,3].astype("float"))
+new_train[:,1] = reduced_data[:,7]/(reduced_data[:,11]+reduced_data[:,12]+reduced_data[:,13])
+new_train[:,2] = (reduced_data[:,8]+reduced_data[:,10])
+new_train[:,3] = (reduced_data[:,12]+reduced_data[:,13])
+new_train[:,4] = np.log(reduced_data[:,3].astype("float"))
 NBO = 2*(reduced_data[:,8]+reduced_data[:,10]+reduced_data[:,11]+reduced_data[:,12]+reduced_data[:,13]-reduced_data[:,7])
 NBOO = NBO/(2*reduced_data[:,5]+2*reduced_data[:,6]+3*reduced_data[:,7]+reduced_data[:,8]+reduced_data[:,10]+reduced_data[:,11]+reduced_data[:,12]+reduced_data[:,13])
-new_train[:,6] = NBOO
+new_train[:,5] = NBOO
 
 a  = reduced_data[:,0].astype("float")
 b = reduced_data[:,1].astype("float")
-new_train[:,7] = a/b
+new_train[:,6] = a/b
+new_train[:,7] = 1/reduced_data[:,1]
+#%%
 #Train-validation-test split: 60-20-20, using ordinary linear regression
 X_train, X_test, y_train, y_test = train_test_split(new_train, y_whole_set, test_size=0.2, random_state=1)
 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=1) 
@@ -86,10 +91,10 @@ reg = LinearRegression().fit(X_train, y_train)
 beta = reg.coef_
 beta[0] = reg.intercept_
 y_val_pred = np.matmul(X_val,beta)
-val_error = np.sum((y_val_pred-y_val)**2)/len(y_val_pred)#1.5526  #validation error(MSE)
+val_error = np.sum((y_val_pred-y_val)**2)/len(y_val_pred)#1.2973  #validation error(MSE)
 
 y_test_pred = np.matmul(X_test,beta)
-test_error = np.sum((y_test_pred-y_test)**2)/len(y_test_pred)#0.966  #test error(MSE)
+test_error = np.sum((y_test_pred-y_test)**2)/len(y_test_pred)#1.0566  #test error(MSE)
 #%%
 neigh = KNeighborsRegressor()
 #%%
@@ -123,7 +128,7 @@ for i in range(np.shape(X_val)[0]):
     p = r.predict(exog = X_val[i])
     y_pred[i] = p
 #%%
-val_error_new = np.sum((y_pred-y_val)**2)/len(y_val) #1.2146
+val_error_new = np.sum((y_pred-y_val)**2)/len(y_val) #1.0767
 #%%
 y_pred_test = np.zeros(len(y_test))
 for i in range(np.shape(X_test)[0]):
@@ -140,7 +145,7 @@ for i in range(np.shape(X_test)[0]):
     r = wls_model.fit()
     p = r.predict(exog = X_test[i])
     y_pred_test[i] = p
-test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #4.9902
+test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.6705
 #%%
 #Ridge Regression
 rid = Ridge(alpha=0.1).fit(X_train, y_train)
@@ -162,7 +167,7 @@ test_error_l = np.sum((y_test_pred_l-y_test)**2)/len(y_val_pred)#0.966  #test er
 y_test = np.exp(y_test)/10000
 y_pred_test = np.exp(y_pred_test)/10000
 #%%
-plt.scatter(y_test, y_test_pred)
+plt.scatter(y_test, y_pred_test)
 plt.xlabel("measured CO2")
 plt.ylabel("calculated CO2")
 #%%
@@ -172,12 +177,13 @@ new_y_pred = clf.fit_predict(y_pred_test)
 #%%
 mask = new_y_pred != -1
 #%%
-y_test_new = y_test[mask]
+booArray = y_test < 15
 #%%
-y_test_pred_new = y_pred_test[mask,:]
+y_test_new = y_test[booArray]
 #%%
-x = np.linspace(0, 13, 1000)
+y_test_pred_new = y_pred_test[booArray]
 #%%
+x = np.linspace(0, 15, 1000)
 #%%
 plt.scatter(y_test_new, y_test_pred_new)
 plt.plot(x,x,"-k")
