@@ -14,9 +14,16 @@ import matplotlib.pyplot as plt
 import statsmodels.api as sm
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.svm import SVR
+import seaborn as sns
 #%%
 #Remove data that have missing values
 data = pd.read_excel("Solubility_database5-11.xlsx", header=1)
+data = pd.read_excel("Solubility_database5-11.xlsx", header=1)
+clean_data = data[data["Phases"] == "liq"]
+clean_data1 = data[data["Phases"] == "liq+fl"]
+clean_data2 = data[data["Phases"].isnull()]
+data = pd.concat([clean_data, clean_data1, clean_data2], ignore_index = True)
+#%%
 data = data[data["xSiO2"].notna()]
 data = data[data["PCO2 (bar)"].notna()]
 data = data[data["CO2 Glass (wt.%)"].notna()]
@@ -40,7 +47,7 @@ for i in range(np.shape(copy_of_data)[0]):
         index1.append(i)
 copy_of_data = copy_of_data[index1]
 #%%
-idx = [9,11,30,47,122,162,163,164,165,166,167,168,169,170,171]
+idx = [9,11,30,47,122,162,163,164,165,166,167,168,169,170,171,0,47]
 reduced_data = copy_of_data[:,idx]
 #%%
 for i in range(5,15):
@@ -67,7 +74,6 @@ for i in range(np.shape(reduced_data)[0]):
 reduced_data = np.delete(reduced_data, idx3, 0)
 #%%
 reduced_data = reduced_data[reduced_data[:,4]!=0]
-#%%
 y_whole_set = np.log(reduced_data[:,4].astype("float"))
 #%%
 new_train = np.ones((np.shape(reduced_data)[0],8))
@@ -84,17 +90,23 @@ b = reduced_data[:,1].astype("float")
 new_train[:,6] = a/b
 new_train[:,7] = 1/reduced_data[:,1]
 #%%
+new_train1 = np.append(new_train, np.reshape(reduced_data[:,15],(-1,1)),1)
+new_train1 = np.append(new_train1, np.reshape(reduced_data[:,16],(-1,1)),1)
+#%%
 #Train-validation-test split: 60-20-20, using ordinary linear regression
-X_train, X_test, y_train, y_test = train_test_split(new_train, y_whole_set, test_size=0.2, random_state=1)
-X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=1) 
-reg = LinearRegression().fit(X_train, y_train)
+X_train, X_test, y_train, y_test = train_test_split(new_train1, y_whole_set, test_size=0.2, random_state=1)
+X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=1)
+#%% 
+reg = LinearRegression().fit(X_train[:,:8], y_train)
 beta = reg.coef_
 beta[0] = reg.intercept_
-y_val_pred = np.matmul(X_val,beta)
+y_val_pred = np.matmul(X_val[:,:8],beta)
 val_error = np.sum((y_val_pred-y_val)**2)/len(y_val_pred)#1.2973  #validation error(MSE)
 
-y_test_pred = np.matmul(X_test,beta)
+y_test_pred = np.matmul(X_test[:,:8],beta)
 test_error = np.sum((y_test_pred-y_test)**2)/len(y_test_pred)#1.0566  #test error(MSE)
+#%%
+
 #%%
 neigh = KNeighborsRegressor()
 #%%
@@ -111,41 +123,44 @@ y_svm_predict_val = svr.predict(X_val)
 y_svm_predict_test = svr.predict(X_test)
 svm_val = np.sum((y_svm_predict_val-y_val)**2)/len(y_val) #1.8973
 svm_test = np.sum((y_svm_predict_test-y_test)**2)/len(y_test) #1.0208
+
 #%%
-y_pred = np.zeros(len(y_val))
-for i in range(np.shape(X_val)[0]):
+a = X_train[:,:8].astype("float64")
+#%%
+y_pred = np.zeros(len(y_train))
+for i in range(np.shape(X_train)[0]):
     a = np.zeros(np.shape(X_train)[0])
     for j in range(np.shape(X_train)[0]):
-        a[j] = np.linalg.norm(X_train[j]-X_val[i])
+        a[j] = np.linalg.norm(X_train[j,:8]-X_train[i,:8])
     b = a
     for k in range(len(b)):
         if b[k] == 0:
             continue
         else:
             b[k] = 1/b[k]
-    wls_model = sm.WLS(y_train, X_train, weights = b)
+    wls_model = sm.WLS(y_train, X_train[:,:8].astype("float64"), weights = b)
     r = wls_model.fit()
-    p = r.predict(exog = X_val[i])
+    p = r.predict(exog = X_train[i,:8].astype("float64"))
     y_pred[i] = p
 #%%
-val_error_new = np.sum((y_pred-y_val)**2)/len(y_val) #1.0767
+val_error_new = np.sum((y_pred-y_train)**2)/len(y_train) #1.0767 #train: 0.4917
 #%%
 y_pred_test = np.zeros(len(y_test))
 for i in range(np.shape(X_test)[0]):
     a = np.zeros(np.shape(X_train)[0])
     for j in range(np.shape(X_train)[0]):
-        a[j] = np.linalg.norm(X_train[j]-X_test[i])
+        a[j] = np.linalg.norm(X_train[j,:8]-X_test[i,:8])
     b = a
     for k in range(len(b)):
         if b[k] == 0:
             continue
         else:
             b[k] = 1/b[k]
-    wls_model = sm.WLS(y_train, X_train, weights = b)
+    wls_model = sm.WLS(y_train, X_train[:,:8].astype("float64"), weights = b)
     r = wls_model.fit()
-    p = r.predict(exog = X_test[i])
+    p = r.predict(exog = X_test[i,:8].astype("float64"))
     y_pred_test[i] = p
-test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.6705
+test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.513
 #%%
 #Ridge Regression
 rid = Ridge(alpha=0.1).fit(X_train, y_train)
@@ -183,7 +198,7 @@ y_test_new = y_test[booArray]
 #%%
 y_test_pred_new = y_pred_test[booArray]
 #%%
-x = np.linspace(0, 15, 1000)
+x = np.linspace(4, 13, 1000)
 #%%
 plt.scatter(y_test_new, y_test_pred_new)
 plt.plot(x,x,"-k")
@@ -191,9 +206,30 @@ plt.xlabel("measured CO2 in wt%")
 plt.ylabel("calculated CO2")
 plt.title("test data")
 #%%
+y_train = np.exp(y_train)/10000
+y_pred = np.exp(y_pred)/10000
+#%%
+df = np.append(np.reshape(y_train, (-1,1)), np.reshape(y_pred, (-1,1)),1)
+df = np.append(df, np.reshape(X_train[:,8], (-1,1)),1)
+df = pd.DataFrame(df, columns = ["true_CO2", "calculated_CO2", "experiments"])
+#%%
+sns.lmplot('true_CO2', 'calculated_CO2', data=df, hue='experiments', fit_reg=False)
+plt.plot(x,x,"-k")
+plt.show()
 
 
+#%%
+df1 = np.append(np.reshape(y_test, (-1,1)), np.reshape(y_pred_test, (-1,1)),1)
+df1 = np.append(df1, np.reshape(X_test[:,8], (-1,1)),1)
+df1 = pd.DataFrame(df1, columns = ["true_value", "calculated_value", "experiments"])
+sns.lmplot('true_value', 'calculated_value', data=df1, hue='experiments', fit_reg=False)
+plt.plot(x,x,"-k")
+plt.show()
 
-
-
+#%%
+df = np.append(np.reshape(np.log(X_train[:,9].astype("float64")), (-1,1)), np.reshape(y_pred, (-1,1)),1)
+df = np.append(df, np.reshape(X_train[:,8], (-1,1)),1)
+df = pd.DataFrame(df, columns = ["log_PCO2", "calculated_CO2", "experiments"])
+sns.lmplot('log_PCO2', 'calculated_CO2', data=df, hue='experiments', fit_reg=False)
+plt.show()
 
