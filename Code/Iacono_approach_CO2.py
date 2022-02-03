@@ -18,7 +18,6 @@ import seaborn as sns
 #%%
 #Remove data that have missing values
 data = pd.read_excel("Solubility_database5-11.xlsx", header=1)
-data = pd.read_excel("Solubility_database5-11.xlsx", header=1)
 clean_data = data[data["Phases"] == "liq"]
 clean_data1 = data[data["Phases"] == "liq+fl"]
 clean_data2 = data[data["Phases"].isnull()]
@@ -47,7 +46,7 @@ for i in range(np.shape(copy_of_data)[0]):
         index1.append(i)
 copy_of_data = copy_of_data[index1]
 #%%
-idx = [9,11,30,47,122,162,163,164,165,166,167,168,169,170,171,0,47]
+idx = [9,11,30,47,122,162,163,164,165,166,167,168,169,170,171,0]
 reduced_data = copy_of_data[:,idx]
 #%%
 for i in range(5,15):
@@ -91,7 +90,7 @@ new_train[:,6] = a/b
 new_train[:,7] = 1/reduced_data[:,1]
 #%%
 new_train1 = np.append(new_train, np.reshape(reduced_data[:,15],(-1,1)),1)
-new_train1 = np.append(new_train1, np.reshape(reduced_data[:,16],(-1,1)),1)
+new_train1 = np.append(new_train1, np.reshape(reduced_data[:,4],(-1,1)),1)
 #%%
 #Train-validation-test split: 60-20-20, using ordinary linear regression
 X_train, X_test, y_train, y_test = train_test_split(new_train1, y_whole_set, test_size=0.2, random_state=1)
@@ -105,8 +104,6 @@ val_error = np.sum((y_val_pred-y_val)**2)/len(y_val_pred)#1.2973  #validation er
 
 y_test_pred = np.matmul(X_test[:,:8],beta)
 test_error = np.sum((y_test_pred-y_test)**2)/len(y_test_pred)#1.0566  #test error(MSE)
-#%%
-
 #%%
 neigh = KNeighborsRegressor()
 #%%
@@ -209,27 +206,58 @@ plt.title("test data")
 y_train = np.exp(y_train)/10000
 y_pred = np.exp(y_pred)/10000
 #%%
+y_train = np.delete(y_train, 126)
+y_pred = np.delete(y_pred, 126)
+#%%
 df = np.append(np.reshape(y_train, (-1,1)), np.reshape(y_pred, (-1,1)),1)
-df = np.append(df, np.reshape(X_train[:,8], (-1,1)),1)
+#%%
+a2 = X_train[:,8]
+#%%
+a2 = np.delete(a2,126)
+df = np.append(df, np.reshape(a2, (-1,1)),1)
 df = pd.DataFrame(df, columns = ["true_CO2", "calculated_CO2", "experiments"])
 #%%
-sns.lmplot('true_CO2', 'calculated_CO2', data=df, hue='experiments', fit_reg=False)
-plt.plot(x,x,"-k")
+a1 = len(df["experiments"].unique())
+#%%
+marker = ['o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8']
+markers = [marker[i] for i in range(len(df["experiments"].unique()))]
+sns.lmplot('true_CO2', 'calculated_CO2', data=df, hue='experiments', markers = markers, fit_reg=False)
+#plt.plot(x,x,"-k")
 plt.show()
 
 
+#%%
+y_test = np.delete(y_test, 123)
+y_pred_test = np.delete(y_pred_test,123)
+#%%
+a3 = X_test[:,8]
+#%%
+a3 = np.delete(a3,123)
 #%%
 df1 = np.append(np.reshape(y_test, (-1,1)), np.reshape(y_pred_test, (-1,1)),1)
-df1 = np.append(df1, np.reshape(X_test[:,8], (-1,1)),1)
+df1 = np.append(df1, np.reshape(a3, (-1,1)),1)
 df1 = pd.DataFrame(df1, columns = ["true_value", "calculated_value", "experiments"])
-sns.lmplot('true_value', 'calculated_value', data=df1, hue='experiments', fit_reg=False)
-plt.plot(x,x,"-k")
+#%%
+c = len(df1["experiments"].unique())
+#%%
+marker1 = ['o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o']
+markers1 = [marker[i] for i in range(len(df1["experiments"].unique()))]
+sns.lmplot('true_value', 'calculated_value', data=df1, hue='experiments', markers = markers1, fit_reg=False)
 plt.show()
 
 #%%
-df = np.append(np.reshape(np.log(X_train[:,9].astype("float64")), (-1,1)), np.reshape(y_pred, (-1,1)),1)
-df = np.append(df, np.reshape(X_train[:,8], (-1,1)),1)
+a4 = X_train[:,9]
+a4 = np.delete(a4, 126)
+#%%
+df = np.append(np.reshape(np.log(a4.astype("float64")), (-1,1)), np.reshape(y_pred, (-1,1)),1)
+df = np.append(df, np.reshape(a2, (-1,1)),1)
 df = pd.DataFrame(df, columns = ["log_PCO2", "calculated_CO2", "experiments"])
 sns.lmplot('log_PCO2', 'calculated_CO2', data=df, hue='experiments', fit_reg=False)
+plt.show()
+#%%
+df = np.append(np.reshape(a4, (-1,1)), np.reshape(y_pred, (-1,1)),1)
+df = np.append(df, np.reshape(a2, (-1,1)),1)
+df = pd.DataFrame(df, columns = ["PCO2", "calculated_CO2", "experiments"])
+sns.lmplot('PCO2', 'calculated_CO2', data=df, hue='experiments', fit_reg=False)
 plt.show()
 
