@@ -14,7 +14,7 @@ import statsmodels.api as sm
 import seaborn as sns
 #%%
 #Remove data that have missing values
-data = pd.read_excel("Solubility_database5-11.xlsx", header=1)
+data = pd.read_excel("Solubility_database5-12.xlsx", header=1)
 clean_data = data[data["Phases"] == "liq"]
 clean_data1 = data[data["Phases"] == "liq+fl"]
 clean_data2 = data[data["Phases"].isnull()]
@@ -60,19 +60,16 @@ for i in range(np.shape(reduced_data)[0]):
 reduced_data = reduced_data[idx1]
 
 #%%
-new_train = np.ones((np.shape(reduced_data)[0],8))
-new_train[:,1] = reduced_data[:,6]/(reduced_data[:,10]+reduced_data[:,11]+reduced_data[:,12])
-new_train[:,2] = (reduced_data[:,7]+reduced_data[:,9])
-new_train[:,3] = (reduced_data[:,11]+reduced_data[:,12])
-new_train[:,4] = np.log(reduced_data[:,2].astype("float"))
+new_train = np.ones((np.shape(reduced_data)[0],5))
+new_train[:,1] = np.log(reduced_data[:,2].astype("float"))
 NBO = 2*(reduced_data[:,7]+reduced_data[:,9]+reduced_data[:,10]+reduced_data[:,11]+reduced_data[:,12]-reduced_data[:,6])
 NBOO = NBO/(2*reduced_data[:,4]+2*reduced_data[:,5]+3*reduced_data[:,6]+reduced_data[:,7]+reduced_data[:,9]+reduced_data[:,10]+reduced_data[:,11]+reduced_data[:,12])
-new_train[:,5] = NBOO
+new_train[:,2] = NBOO
 
 a  = reduced_data[:,0].astype("float")
 b = reduced_data[:,1].astype("float")
-new_train[:,6] = a/b
-new_train[:,7] = 1/reduced_data[:,1]
+new_train[:,3] = a/b
+new_train[:,4] = 1/reduced_data[:,1]
 
 y_whole_set = np.log(reduced_data[:,3].astype("float"))
 new_train1 = np.append(new_train, np.reshape(reduced_data[:,14],(-1,1)),1)
@@ -96,36 +93,36 @@ y_pred = np.zeros(len(y_train))
 for i in range(np.shape(X_train)[0]):
     a = np.zeros(np.shape(X_train)[0])
     for j in range(np.shape(X_train)[0]):
-        a[j] = np.linalg.norm(X_train[j,:8]-X_train[i,:8])
+        a[j] = np.linalg.norm(X_train[j,:5]-X_train[i,:5])
     b = a
     for k in range(len(b)):
         if b[k] == 0:
             continue
         else:
             b[k] = 1/b[k]
-    wls_model = sm.WLS(y_train, X_train[:,:8].astype("float64"), weights = b)
+    wls_model = sm.WLS(y_train, X_train[:,:5].astype("float64"), weights = b)
     r = wls_model.fit()
-    p = r.predict(exog = X_train[i,:8].astype("float64"))
+    p = r.predict(exog = X_train[i,:5].astype("float64"))
     y_pred[i] = p
 #%%
-val_error_new = np.sum((y_pred-y_train)**2)/len(y_train) #0.1358   #0.1314
+val_error_new = np.sum((y_pred-y_train)**2)/len(y_train) #0.1358    #0.0991
 #%%
 y_pred_test = np.zeros(len(y_test))
 for i in range(np.shape(X_test)[0]):
     a = np.zeros(np.shape(X_train)[0])
     for j in range(np.shape(X_train)[0]):
-        a[j] = np.linalg.norm(X_train[j,:8]-X_test[i,:8])
+        a[j] = np.linalg.norm(X_train[j,:5]-X_test[i,:5])
     b = a
     for k in range(len(b)):
         if b[k] == 0:
             continue
         else:
             b[k] = 1/b[k]
-    wls_model = sm.WLS(y_train,X_train[:,:8].astype("float64"), weights = b)
+    wls_model = sm.WLS(y_train,X_train[:,:5].astype("float64"), weights = b)
     r = wls_model.fit()
-    p = r.predict(exog = X_test[i,:8].astype("float64"))
+    p = r.predict(exog = X_test[i,:5].astype("float64"))
     y_pred_test[i] = p
-test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.224
+test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.224 #0.1039
 #%%
 rid = Ridge(alpha=100).fit(X_train, y_train)
 beta_r = rid.coef_
@@ -146,10 +143,9 @@ test_error_l = np.sum((y_test_pred_l-y_test)**2)/len(y_val_pred)#0.2739  #test e
 y_train = np.exp(y_train)
 y_pred = np.exp(y_pred)
 y_test = np.exp(y_test)
-#%%
 y_pred_test = np.exp(y_pred_test)
 #%%
-plt.scatter(y_test, y_test_pred)
+plt.scatter(y_test, y_pred_test)
 plt.xlabel("measured H2O")
 plt.ylabel("calculated H2O")
 #%%
@@ -170,30 +166,27 @@ for i in range(np.shape(X_test)[0]):
     y_pred[i] = p
 test_error_new = np.sum((y_pred-y_test)**2)/len(y_test) #0.5898
 #%%
-booArray = y_test < 10
+booArray = y_train < 10
+y_train_new = y_train[booArray]
+y_pred_new = y_pred[booArray]
+a2 = X_train[booArray]
+a2 = a2[:,5]
 #%%
-y_test_new = y_test[booArray]
-#%%
-y_test_pred_new = y_test_pred[booArray]
+a1 = len(df["experiments"].unique())
 #%%
 df = np.append(np.reshape(y_train, (-1,1)), np.reshape(y_pred, (-1,1)),1)
-df = np.append(df, np.reshape(X_train[:,8], (-1,1)),1)
+df = np.append(df, np.reshape(X_train[:,5], (-1,1)),1)
 df = pd.DataFrame(df, columns = ["true_H2O", "calculated_H2O", "experiments"])
+
+#%%
 sns.lmplot('true_H2O', 'calculated_H2O', data=df, hue='experiments', fit_reg=False)
-x = np.linspace(0, 10, 1000)
-plt.plot(x,x,"-k")
-plt.show()
 #%%
 df1 = np.append(np.reshape(y_test, (-1,1)), np.reshape(y_pred_test, (-1,1)),1)
 df1 = np.append(df1, np.reshape(X_test[:,8], (-1,1)),1)
 df1 = pd.DataFrame(df1, columns = ["true_value", "calculated_value", "experiments"])
 sns.lmplot('true_value', 'calculated_value', data=df1, hue='experiments', fit_reg=False)
-plt.plot(x,x,"-k")
-plt.show()
 #%%
 df = np.append(np.reshape(np.log(X_train[:,9].astype("float64")), (-1,1)), np.reshape(y_pred, (-1,1)),1)
 df = np.append(df, np.reshape(X_train[:,8], (-1,1)),1)
 df = pd.DataFrame(df, columns = ["log_PH2O", "calculated_H2O", "experiments"])
-sns.lmplot('log_PH2O', 'calculated_H2O', data=df, hue='experiments', fit_reg=False)
-plt.show()
 

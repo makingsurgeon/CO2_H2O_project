@@ -17,7 +17,7 @@ from sklearn.svm import SVR
 import seaborn as sns
 #%%
 #Remove data that have missing values
-data = pd.read_excel("Solubility_database5-11.xlsx", header=1)
+data = pd.read_excel("Solubility_database5-12.xlsx", header=1)
 clean_data = data[data["Phases"] == "liq"]
 clean_data1 = data[data["Phases"] == "liq+fl"]
 clean_data2 = data[data["Phases"].isnull()]
@@ -46,7 +46,7 @@ for i in range(np.shape(copy_of_data)[0]):
         index1.append(i)
 copy_of_data = copy_of_data[index1]
 #%%
-idx = [9,11,30,47,122,162,163,164,165,166,167,168,169,170,171,0]
+idx = [9,11,189,47,122,162,163,164,165,166,167,168,169,170,171,0]
 reduced_data = copy_of_data[:,idx]
 #%%
 for i in range(5,15):
@@ -75,7 +75,7 @@ reduced_data = np.delete(reduced_data, idx3, 0)
 reduced_data = reduced_data[reduced_data[:,4]!=0]
 y_whole_set = np.log(reduced_data[:,4].astype("float"))
 #%%
-new_train = np.ones((np.shape(reduced_data)[0],8))
+new_train = np.ones((np.shape(reduced_data)[0],9))
 new_train[:,1] = reduced_data[:,7]/(reduced_data[:,11]+reduced_data[:,12]+reduced_data[:,13])
 new_train[:,2] = (reduced_data[:,8]+reduced_data[:,10])
 new_train[:,3] = (reduced_data[:,12]+reduced_data[:,13])
@@ -88,6 +88,7 @@ a  = reduced_data[:,0].astype("float")
 b = reduced_data[:,1].astype("float")
 new_train[:,6] = a/b
 new_train[:,7] = 1/reduced_data[:,1]
+new_train[:,8] = reduced_data[:,2]
 #%%
 new_train1 = np.append(new_train, np.reshape(reduced_data[:,15],(-1,1)),1)
 new_train1 = np.append(new_train1, np.reshape(reduced_data[:,4],(-1,1)),1)
@@ -96,7 +97,7 @@ new_train1 = np.append(new_train1, np.reshape(reduced_data[:,4],(-1,1)),1)
 X_train, X_test, y_train, y_test = train_test_split(new_train1, y_whole_set, test_size=0.2, random_state=1)
 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=1)
 #%% 
-reg = LinearRegression().fit(X_train[:,:8], y_train)
+reg = LinearRegression().fit(X_train[:,:9], y_train)
 beta = reg.coef_
 beta[0] = reg.intercept_
 y_val_pred = np.matmul(X_val[:,:8],beta)
@@ -128,36 +129,36 @@ y_pred = np.zeros(len(y_train))
 for i in range(np.shape(X_train)[0]):
     a = np.zeros(np.shape(X_train)[0])
     for j in range(np.shape(X_train)[0]):
-        a[j] = np.linalg.norm(X_train[j,:8]-X_train[i,:8])
+        a[j] = np.linalg.norm(X_train[j,:9]-X_train[i,:9])
     b = a
     for k in range(len(b)):
         if b[k] == 0:
             continue
         else:
             b[k] = 1/b[k]
-    wls_model = sm.WLS(y_train, X_train[:,:8].astype("float64"), weights = b)
+    wls_model = sm.WLS(y_train, X_train[:,:9].astype("float64"), weights = b)
     r = wls_model.fit()
-    p = r.predict(exog = X_train[i,:8].astype("float64"))
+    p = r.predict(exog = X_train[i,:9].astype("float64"))
     y_pred[i] = p
 #%%
-val_error_new = np.sum((y_pred-y_train)**2)/len(y_train) #1.0767 #train: 0.4917
+val_error_new = np.sum((y_pred-y_train)**2)/len(y_train) #1.0767 #train: 0.5749
 #%%
 y_pred_test = np.zeros(len(y_test))
 for i in range(np.shape(X_test)[0]):
     a = np.zeros(np.shape(X_train)[0])
     for j in range(np.shape(X_train)[0]):
-        a[j] = np.linalg.norm(X_train[j,:8]-X_test[i,:8])
+        a[j] = np.linalg.norm(X_train[j,:9]-X_test[i,:9])
     b = a
     for k in range(len(b)):
         if b[k] == 0:
             continue
         else:
             b[k] = 1/b[k]
-    wls_model = sm.WLS(y_train, X_train[:,:8].astype("float64"), weights = b)
+    wls_model = sm.WLS(y_train, X_train[:,:9].astype("float64"), weights = b)
     r = wls_model.fit()
-    p = r.predict(exog = X_test[i,:8].astype("float64"))
+    p = r.predict(exog = X_test[i,:9].astype("float64"))
     y_pred_test[i] = p
-test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.513
+test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.6692
 #%%
 #Ridge Regression
 rid = Ridge(alpha=0.1).fit(X_train, y_train)
@@ -206,14 +207,14 @@ plt.title("test data")
 y_train = np.exp(y_train)/10000
 y_pred = np.exp(y_pred)/10000
 #%%
-y_train = np.delete(y_train, 126)
-y_pred = np.delete(y_pred, 126)
+booArray = y_train < 10
+y_train_new = y_train[booArray]
+y_pred_new = y_pred[booArray]
+a2 = X_train[booArray]
+a2 = a2[:,9]
 #%%
-df = np.append(np.reshape(y_train, (-1,1)), np.reshape(y_pred, (-1,1)),1)
+df = np.append(np.reshape(y_train_new, (-1,1)), np.reshape(y_pred_new, (-1,1)),1)
 #%%
-a2 = X_train[:,8]
-#%%
-a2 = np.delete(a2,126)
 df = np.append(df, np.reshape(a2, (-1,1)),1)
 df = pd.DataFrame(df, columns = ["true_CO2", "calculated_CO2", "experiments"])
 #%%
@@ -227,14 +228,15 @@ plt.show()
 
 
 #%%
-y_test = np.delete(y_test, 123)
-y_pred_test = np.delete(y_pred_test,123)
+y_test = np.exp(y_test)/10000
+y_pred_test = np.exp(y_pred_test)/10000
+booArray = y_test < 10
+y_test_new = y_test[booArray]
+y_pred_test_new = y_pred_test[booArray]
+a3 = X_test[booArray]
+a3 = a3[:,9]
 #%%
-a3 = X_test[:,8]
-#%%
-a3 = np.delete(a3,123)
-#%%
-df1 = np.append(np.reshape(y_test, (-1,1)), np.reshape(y_pred_test, (-1,1)),1)
+df1 = np.append(np.reshape(y_test_new, (-1,1)), np.reshape(y_pred_test_new, (-1,1)),1)
 df1 = np.append(df1, np.reshape(a3, (-1,1)),1)
 df1 = pd.DataFrame(df1, columns = ["true_value", "calculated_value", "experiments"])
 #%%
@@ -246,18 +248,39 @@ sns.lmplot('true_value', 'calculated_value', data=df1, hue='experiments', marker
 plt.show()
 
 #%%
-a4 = X_train[:,9]
-a4 = np.delete(a4, 126)
+a4 = X_train[:,10]
+booArray = y_train < 10
+a4 = a4[booArray]
 #%%
-df = np.append(np.reshape(np.log(a4.astype("float64")), (-1,1)), np.reshape(y_pred, (-1,1)),1)
+df = np.append(np.reshape(np.log(a4.astype("float64")), (-1,1)), np.reshape(y_train_new, (-1,1)),1)
+df = np.append(df, np.reshape(a2, (-1,1)),1)
+df = pd.DataFrame(df, columns = ["log_PCO2", "ground_truth_CO2", "experiments"])
+sns.lmplot('log_PCO2', 'ground_truth_CO2', data=df, hue='experiments', markers = markers, fit_reg=False)
+plt.show()
+#%%
+df = np.append(np.reshape(np.log(a4.astype("float64")), (-1,1)), np.reshape(y_pred_new, (-1,1)),1)
 df = np.append(df, np.reshape(a2, (-1,1)),1)
 df = pd.DataFrame(df, columns = ["log_PCO2", "calculated_CO2", "experiments"])
-sns.lmplot('log_PCO2', 'calculated_CO2', data=df, hue='experiments', fit_reg=False)
+sns.lmplot('log_PCO2', 'calculated_CO2', data=df, hue='experiments', markers = markers, fit_reg=False)
 plt.show()
 #%%
-df = np.append(np.reshape(a4, (-1,1)), np.reshape(y_pred, (-1,1)),1)
+df = np.append(np.reshape(a4, (-1,1)), np.reshape(y_pred_new, (-1,1)),1)
 df = np.append(df, np.reshape(a2, (-1,1)),1)
 df = pd.DataFrame(df, columns = ["PCO2", "calculated_CO2", "experiments"])
-sns.lmplot('PCO2', 'calculated_CO2', data=df, hue='experiments', fit_reg=False)
+sns.lmplot('PCO2', 'calculated_CO2', data=df, markers = markers, hue='experiments', fit_reg=False)
 plt.show()
+#%%
+df = np.append(np.reshape(a4, (-1,1)), np.reshape(y_train_new, (-1,1)),1)
+df = np.append(df, np.reshape(a2, (-1,1)),1)
+df = pd.DataFrame(df, columns = ["PCO2", "ground_truth_CO2", "experiments"])
+sns.lmplot('PCO2', 'ground_truth_CO2', data=df, markers = markers, hue='experiments', fit_reg=False)
+plt.show()
+
+
+
+
+
+
+
+
 
