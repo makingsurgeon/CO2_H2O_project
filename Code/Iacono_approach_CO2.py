@@ -23,9 +23,10 @@ clean_data1 = data[data["Phases"] == "liq+fl"]
 clean_data2 = data[data["Phases"].isnull()]
 data = pd.concat([clean_data, clean_data1, clean_data2], ignore_index = True)
 #%%
-data = data[data["xSiO2"].notna()]
 data = data[data["PCO2 (bar)"].notna()]
 data = data[data["CO2 Glass (wt.%)"].notna()]
+data = data[data["Reference"]!= "Eguchi, J., Dasgupta, R. (2017)"]
+data = data[data["Reference"]!= "Eguchi, J., Dasgupta, R. (2018)"]
 data = data.to_numpy()
 copy_of_data = data
 #%%
@@ -45,21 +46,54 @@ for i in range(np.shape(copy_of_data)[0]):
     if not np.isnan(copy_of_data[i,122]):
         index1.append(i)
 copy_of_data = copy_of_data[index1]
+index2 = []
+for i in range(np.shape(copy_of_data)[0]):
+    if copy_of_data[i,122] != 0:
+        index2.append(i)
+copy_of_data = copy_of_data[index2]
 #%%
-idx = [9,11,189,47,122,162,163,164,165,166,167,168,169,170,171,0]
+for i in range(np.shape(copy_of_data)[0]):
+    if np.isnan(data[i,179]):
+        copy_of_data[i,179] = 0
+for i in range(np.shape(copy_of_data)[0]):
+    if np.isnan(data[i,180]):
+        copy_of_data[i,180] = 0
+for i in range(np.shape(copy_of_data)[0]):
+    if np.isnan(data[i,181]):
+        copy_of_data[i,181] = 0
+for i in range(np.shape(copy_of_data)[0]):
+    if np.isnan(data[i,182]):
+        copy_of_data[i,182] = 0
+for i in range(np.shape(copy_of_data)[0]):
+    if np.isnan(data[i,183]):
+        copy_of_data[i,183] = 0
+for i in range(np.shape(copy_of_data)[0]):
+    if np.isnan(data[i,184]):
+        copy_of_data[i,184] = 0
+for i in range(np.shape(copy_of_data)[0]):
+    if np.isnan(data[i,185]):
+        copy_of_data[i,185] = 0
+for i in range(np.shape(copy_of_data)[0]):
+    if np.isnan(data[i,186]):
+        copy_of_data[i,186] = 0
+for i in range(np.shape(copy_of_data)[0]):
+    if np.isnan(data[i,187]):
+        copy_of_data[i,187] = 0
+for i in range(np.shape(copy_of_data)[0]):
+    if np.isnan(data[i,188]):
+        copy_of_data[i,188] = 0
+#%%
+idx = [9,11,189,47,122,179,180,181,182,183,184,185,186,187,188,0]
 reduced_data = copy_of_data[:,idx]
-#%%
 for i in range(5,15):
     reduced_data[:,i] = reduced_data[:,i]/100
-#%%
 idx1 = []
 for i in range(np.shape(reduced_data)[0]):
-    if reduced_data[i,11]+reduced_data[i,12]+reduced_data[i,13] != 0:
+    if reduced_data[i,11]+reduced_data[i,12]+reduced_data[i,13] > 0:
         idx1.append(i)
 
 reduced_data = reduced_data[idx1]
 reduced_data = reduced_data[reduced_data[:,3]!=0]
-#%%
 idx2 = []
 for i in range(np.shape(reduced_data)[0]):
     if type(reduced_data[i,0]) is str:
@@ -71,10 +105,14 @@ for i in range(np.shape(reduced_data)[0]):
     if type(reduced_data[i,1]) is str:
         idx3.append(i)
 reduced_data = np.delete(reduced_data, idx3, 0)
+idx4 = []
+for i in range(np.shape(reduced_data)[0]):
+    if reduced_data[i,5] + reduced_data[i,7] < 0.35:
+        idx4.append(i)
 #%%
+reduced_data = np.delete(reduced_data, idx4, 0)
 reduced_data = reduced_data[reduced_data[:,4]!=0]
 y_whole_set = np.log(reduced_data[:,4].astype("float"))
-#%%
 new_train = np.ones((np.shape(reduced_data)[0],9))
 new_train[:,1] = reduced_data[:,7]/(reduced_data[:,11]+reduced_data[:,12]+reduced_data[:,13])
 new_train[:,2] = (reduced_data[:,8]+reduced_data[:,10])
@@ -125,11 +163,11 @@ svm_test = np.sum((y_svm_predict_test-y_test)**2)/len(y_test) #1.0208
 #%%
 a = X_train[:,:8].astype("float64")
 #%%
-y_pred = np.zeros(len(y_train))
-for i in range(np.shape(X_train)[0]):
+y_pred = np.zeros(len(y_val))
+for i in range(np.shape(X_val)[0]):
     a = np.zeros(np.shape(X_train)[0])
     for j in range(np.shape(X_train)[0]):
-        a[j] = np.linalg.norm(X_train[j,:9]-X_train[i,:9])
+        a[j] = np.linalg.norm(X_train[j,:9]-X_val[i,:9])
     b = a
     for k in range(len(b)):
         if b[k] == 0:
@@ -138,10 +176,10 @@ for i in range(np.shape(X_train)[0]):
             b[k] = 1/b[k]
     wls_model = sm.WLS(y_train, X_train[:,:9].astype("float64"), weights = b)
     r = wls_model.fit()
-    p = r.predict(exog = X_train[i,:9].astype("float64"))
+    p = r.predict(exog = X_val[i,:9].astype("float64"))
     y_pred[i] = p
 #%%
-val_error_new = np.sum((y_pred-y_train)**2)/len(y_train) #1.0767 #train: 0.5749
+val_error_new = np.sum((y_pred-y_val)**2)/len(y_val)   #0.278 0.265 0.338 0.3088 0.3217
 #%%
 y_pred_test = np.zeros(len(y_test))
 for i in range(np.shape(X_test)[0]):
@@ -158,7 +196,7 @@ for i in range(np.shape(X_test)[0]):
     r = wls_model.fit()
     p = r.predict(exog = X_test[i,:9].astype("float64"))
     y_pred_test[i] = p
-test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test) #0.6692
+test_error_new = np.sum((y_pred_test-y_test)**2)/len(y_test)  #0.5698 0.5765 0.3982 0.4 0.4674 0.4006   Avg:0.4334
 #%%
 #Ridge Regression
 rid = Ridge(alpha=0.1).fit(X_train, y_train)
@@ -177,10 +215,10 @@ val_error_l = np.sum((y_val_pred_l-y_val)**2)/len(y_val_pred)#1.5523  #validatio
 y_test_pred_l = np.matmul(X_test,beta_l)
 test_error_l = np.sum((y_test_pred_l-y_test)**2)/len(y_val_pred)#0.966  #test error(MSE)
 #%%
-y_test = np.exp(y_test)/10000
-y_pred_test = np.exp(y_pred_test)/10000
+y_val = np.exp(y_val)/10000
+y_pred = np.exp(y_pred)/10000
 #%%
-plt.scatter(y_test, y_pred_test)
+plt.scatter(y_val, y_pred)
 plt.xlabel("measured CO2")
 plt.ylabel("calculated CO2")
 #%%
@@ -207,11 +245,12 @@ plt.title("test data")
 y_train = np.exp(y_train)/10000
 y_pred = np.exp(y_pred)/10000
 #%%
-booArray = y_train < 10
+booArray = ((y_train < 1) & (y_pred < 1))
 y_train_new = y_train[booArray]
 y_pred_new = y_pred[booArray]
 a2 = X_train[booArray]
-a2 = a2[:,9]
+#%%
+a2 = X_train[:,9]
 #%%
 df = np.append(np.reshape(y_train_new, (-1,1)), np.reshape(y_pred_new, (-1,1)),1)
 #%%
@@ -220,8 +259,9 @@ df = pd.DataFrame(df, columns = ["true_CO2", "calculated_CO2", "experiments"])
 #%%
 a1 = len(df["experiments"].unique())
 #%%
-marker = ['o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8']
+marker = ['o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H']
 markers = [marker[i] for i in range(len(df["experiments"].unique()))]
+#%%
 sns.lmplot('true_CO2', 'calculated_CO2', data=df, hue='experiments', markers = markers, fit_reg=False)
 #plt.plot(x,x,"-k")
 plt.show()
@@ -243,19 +283,23 @@ df1 = pd.DataFrame(df1, columns = ["true_value", "calculated_value", "experiment
 c = len(df1["experiments"].unique())
 #%%
 marker1 = ['o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o', 'x', '^', '+', '*', '8', 's', 'p', 'D', 'H','o']
-markers1 = [marker[i] for i in range(len(df1["experiments"].unique()))]
+markers1 = [marker1[i] for i in range(len(df["experiments"].unique()))]
+#%%
 sns.lmplot('true_value', 'calculated_value', data=df1, hue='experiments', markers = markers1, fit_reg=False)
 plt.show()
 
 #%%
-a4 = X_train[:,10]
-booArray = y_train < 10
-a4 = a4[booArray]
+a4 = reduced_data[:,3].astype("float")
 #%%
-df = np.append(np.reshape(np.log(a4.astype("float64")), (-1,1)), np.reshape(y_train_new, (-1,1)),1)
-df = np.append(df, np.reshape(a2, (-1,1)),1)
+a5 = reduced_data[:,4].astype("float")/10000
+#%%
+a6 = reduced_data[:,15]
+#%%
+df = np.append(np.reshape(np.log(a4), (-1,1)), np.reshape(a5, (-1,1)),1)
+df = np.append(df, np.reshape(a6, (-1,1)),1)
 df = pd.DataFrame(df, columns = ["log_PCO2", "ground_truth_CO2", "experiments"])
-sns.lmplot('log_PCO2', 'ground_truth_CO2', data=df, hue='experiments', markers = markers, fit_reg=False)
+#%%
+sns.lmplot('log_PCO2', 'ground_truth_CO2', data=df, hue='experiments', markers = markers1, fit_reg=False)
 plt.show()
 #%%
 df = np.append(np.reshape(np.log(a4.astype("float64")), (-1,1)), np.reshape(y_pred_new, (-1,1)),1)
@@ -270,12 +314,15 @@ df = pd.DataFrame(df, columns = ["PCO2", "calculated_CO2", "experiments"])
 sns.lmplot('PCO2', 'calculated_CO2', data=df, markers = markers, hue='experiments', fit_reg=False)
 plt.show()
 #%%
-df = np.append(np.reshape(a4, (-1,1)), np.reshape(y_train_new, (-1,1)),1)
+df = np.append(np.reshape(a4, (-1,1)), np.reshape(y_train, (-1,1)),1)
 df = np.append(df, np.reshape(a2, (-1,1)),1)
 df = pd.DataFrame(df, columns = ["PCO2", "ground_truth_CO2", "experiments"])
 sns.lmplot('PCO2', 'ground_truth_CO2', data=df, markers = markers, hue='experiments', fit_reg=False)
 plt.show()
-
+#%%
+a = np.matmul(X_train[:,:9].T, X_train[:,:9])
+#%%
+X_train = X_train[,:9]
 
 
 
