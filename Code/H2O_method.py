@@ -89,7 +89,8 @@ def H2O_prediction(args):
     
     y_whole_set = np.log(reduced_data[:,13].astype("float"))
     
-    y1 = pd.read_csv(args.data)
+    path = os.path.join(args.data)
+    y1 = pd.read_csv(path)
     selected_rows = y1[~y1['Name'].isnull()]
     cols = selected_rows.columns.tolist()
     selected_rows = selected_rows[selected_rows["CO2 (ppm)"].isnull()]
@@ -247,7 +248,8 @@ def CO2_prediction(args):
 
     y_whole_set = np.log(reduced_data[:,3].astype("float"))
     
-    y1 = pd.read_csv(args.data)
+    path = os.path.join(args.data)
+    y1 = pd.read_csv(path)
     selected_rows = y1[~y1['Name'].isnull()]
     selected_rows = selected_rows[selected_rows["CO2 (ppm)"].isnull()]
     cols = selected_rows.columns.tolist()
@@ -401,7 +403,8 @@ def Pressure(args):
     
     y_whole_set = np.log(reduced_data[:,0].astype("float"))
     
-    y1 = pd.read_csv(args.data)
+    path = os.path.join(args.data)
+    y1 = pd.read_csv(path)
     selected_rows = y1[~y1['Name'].isnull()]
     cols = selected_rows.columns.tolist()
     selected_rows = selected_rows[~selected_rows["CO2 (ppm)"].isnull()]
